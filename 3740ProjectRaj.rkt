@@ -29,10 +29,9 @@
     [(is-sparse? lst) lst]
     [else (cons (list (first lst) (+ (index-of lst (first lst)) offset)) (to-sparse-helper (rest lst) (+ offset 1)))]))
 
-;to-sparse, utilizes a helper function that takes in an integer representing the power of the current term with
-;           respect to beginning of the list as it gets smaller with recursion. To convert from sparse, it checks
-;           if the power of the current first element matches the current index in the dense reepresentation.
-;           If it does it cons's that element and continues, if not it cons's a 0 and continues.
+;to-dense, utilizes a helper function that takes in an integer representing the power of the current term in the
+;          dense representation of the polynomial. If the current pair's power in the sparse representation matches
+;          that index cons's the coffecient of that pair into the dense representation, otherwise cons 0 and continue.
 
 (define (to-dense lst)
   (to-dense-helper lst 0))
@@ -44,7 +43,7 @@
     [(= (first(rest(first lst))) index) (cons (first (first lst)) (to-dense-helper (rest lst) (+ index 1)))]
     [else (cons 0 (to-dense-helper lst (+ index 1)))]))
 
-;degree, 
+;degree, simply increments an integer for each index traversed in the dense representation of a polynomial
 
 (define (degree-helper lst)
   (cond
@@ -57,6 +56,8 @@
     [(is-sparse? lst) (degree-helper (to-dense lst))]
     [else (degree-helper lst)]))
 
+;is-zero, recurses down an increasingly smaller list checking if the first element is = 0. Will only return true if
+;         it reaches the end (if every element is 0).
 
 (define (is-zero-helper lst)
   (cond
@@ -70,6 +71,10 @@
     [(is-sparse? lst) (is-zero-helper (to-dense lst))]
     [else (is-zero-helper lst)]))
 
+;coeff, utilizs a helper function that checks if the index (power) of the first/current term in the dense represen
+;       -tation of the list matches the k parameter. Otherwise recurses down the list, decrementing k to account
+;       for the smaller list size/degree.
+
 (define (coeff-helper lst k)
   (cond
     [(null? lst) 0]
@@ -81,6 +86,11 @@
     [(is-sparse? lst) (coeff-helper (to-dense lst) k)]
     [else (coeff-helper lst k)]))
 
+;eval, utilizes a helper function that takes in an integer parameter that stores the offset from the beginning of
+;      the array, this represents the power of the current term when that information is not accessible from the
+;      smaller sub-lists during the recursion down the list. Simply multiplies the coefficient of the current
+;      by k ^ offset and recurses, incrementing offset.
+
 (define (eval lst k)
   (cond
     [(is-sparse? lst) (eval-helper (to-dense lst) k 0)]
@@ -91,6 +101,7 @@
     [(null? lst) 0]
     [(+ (* (first lst) (expt k offset)) (eval-helper (rest lst) k (+ offset 1)))]))
 
+;add, utilizes a helper function 
 (define (add p1 p2)
   (cond
     [(and (is-sparse? p1) (is-sparse? p2)) (to-sparse (cutoff-zeros (add-helper (to-dense p1) (to-dense p2))))]
