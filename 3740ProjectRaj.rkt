@@ -1,5 +1,10 @@
 #lang racket
-
+;cutoff-zerss, a general helper function that strips all 0's off 
+(define (cutoff-zeros lst)
+  (cond
+    [(and (= (last lst) 0) (not (null? (rest lst)))) (cutoff-zeros(reverse (rest (reverse lst))))]
+    [(null? lst) '()]
+    [else lst]))
 ; is-dense, problem is the same as ensuring the list is a list of numbers.
 (define (is-dense? list)
   (cond
@@ -27,6 +32,7 @@
   (cond
     [(null? lst) '()]
     [(is-sparse? lst) lst]
+    [(and (= offset 0) (= 0 (first lst))) '((0 0))]
     [(= 0 (first lst)) (to-sparse-helper (rest lst) (+ offset 1))] 
     [else (cons (list (first lst) (+ (index-of lst (first lst)) offset)) (to-sparse-helper (rest lst) (+ offset 1)))]))
 
@@ -58,7 +64,7 @@
     [(is-sparse? lst) (degree-helper (to-dense lst))]
     [else (degree-helper lst)]))
 
-;is-zero, recurses down an increasingly smaller list checking if the first element is = 0. Will only return true if
+;is-zero, recurses down an increasingly smaller list checking if the first element is = 0. Will only return true if 
 ;         it reaches the end (if every element is 0).
 
 (define (is-zero-helper lst)
@@ -66,7 +72,6 @@
     [(null? lst) #t]
     [(= (first lst) 0) (is-zero-helper (rest lst))]
     [else #f]))
-  ;(and (= (degree lst) 0) (= 0 (first lst))))
 
 (define (is-zero? lst)
   (cond
@@ -166,10 +171,10 @@
 
 (define (quotient p1 p2)
   (cond
-    [(and (is-sparse? p1) (is-sparse? p2)) (to-sparse (quotient-helper (to-dense p1) (to-dense p2)))]
-    [(and (is-dense? p1) (is-sparse? p2)) (quotient-helper p1 (to-dense p2))]
-    [(and (is-sparse? p1) (is-dense? p2))(quotient-helper (to-dense p1) p2)]
-    [else (quotient-helper p1 p2)]))
+    [(and (is-sparse? p1) (is-sparse? p2)) (to-sparse (cutoff-zeros (quotient-helper (to-dense p1) (to-dense p2))))]
+    [(and (is-dense? p1) (is-sparse? p2)) (cutoff-zeros (quotient-helper p1 (to-dense p2)))]
+    [(and (is-sparse? p1) (is-dense? p2))(cutoff-zeros (quotient-helper (to-dense p1) p2))]
+    [else (cutoff-zeros (quotient-helper p1 p2))]))
 
 (define (quotient-helper p1 p2)
   (cond
@@ -185,36 +190,59 @@
     ; Yes-> Return a list of the required coefficient of that cancelling term.
     ; No -> Fill in lower power terms with 0 and cons until recursion reaches base case.
     [(is-zero? p1) '(0)]
-    [(= offset (- (degree p1)  (degree p2))) (list (truncate (/ (coeff p1 (degree p1)) (coeff p2 (degree p2)))))]; have power of quotient term
+    [(= offset (- (degree p1)  (degree p2))) (list (/ (coeff p1 (degree p1)) (coeff p2 (degree p2))))]; (truncate (/ (coeff p1 (degree p1)) (coeff p2 (degree p2))))) 
     [else (cons 0 (findcoeff p1 p2 (+ offset 1)))]))
 
 ;remainder, the same as quotient except upon finding no possible multiple of p2 to subtract from
 ;           p1, returns p1 (the current dividend at that stage in the subtraction).
+
 (define (remainder p1 p2)
   (cond
+    [(and (is-sparse? p1) (is-sparse? p2)) (to-sparse (cutoff-zeros (remainder-helper (to-dense p1) (to-dense p2))))]
+    [(and (is-dense? p1) (is-sparse? p2)) (cutoff-zeros (remainder-helper p1 (to-dense p2)))]
+    [(and (is-sparse? p1) (is-dense? p2))(cutoff-zeros (remainder-helper (to-dense p1) p2))]
+    [else (cutoff-zeros (remainder-helper p1 p2))]))
+
+(define (remainder-helper p1 p2)
+  (cond
+    [(> (degree p2) (degree p1)) p1]
+    [(is-zero? p1) '(0)]
     [(is-zero? p2) '(0)]
     [(is-zero? (findcoeff p1 p2 0)) p1]
-    [else (quotient-helper (subtract p1  (multiply (findcoeff p1 p2 0) p2)) p2)]))
-
+    [else (remainder-helper (subtract p1  (multiply (findcoeff p1 p2 0) p2)) p2)]))
 
 ; derivative, returns the derivative of the parameter polynomial. Utilizes a helper function with an
 ;             integer offset parameter to keep track of the power of the current element.
 
 (define (derivative lst)
   (cond
-    [(is-sparse? lst) (derivative-helper (to-dense lst) 0)]
-    [else (derivative-helper lst 0)]))
+    [(is-sparse? lst) (cutoff-zeros (derivative-helper (to-dense lst) 0))]
+    [else (cutoff-zeros (derivative-helper lst 0))]))
 
 (define (derivative-helper lst offset)
   (cond
-    [(null? lst) '()]
+    [(null? lst) '(0)]
     [(= 0 offset) (derivative-helper (rest lst) (+ offset 1))]
-    [else (cons (* offset (first lst)) (derivative-helper (rest lst) (+ offset 1)))])) 
-              
-(define (cutoff-zeros lst)
+    [else (cons (* offset (first lst)) (derivative-helper (rest lst) (+ offset 1)))]))
+
+;gcd, the Euclidean algorithm, utilizing previously defined functions. Namely taking the remainder with the polynomials
+;     alternating as dividends and divisor, and distribute to make the leading coefficient 0.
+
+(define (gcd p1 p2)
   (cond
-    [(and (= (last lst) 0) (not (null? (rest lst)))) (cutoff-zeros(reverse (rest (reverse lst))))]
-    [else lst]))
+    [(and (is-sparse? p1) (is-sparse? p2)) (to-sparse (cutoff-zeros (gcd-helper (to-dense p1) (to-dense p2))))]
+    [(and (is-dense? p1) (is-sparse? p2)) (cutoff-zeros (gcd-helper p1 (to-dense p2)))]
+    [(and (is-sparse? p1) (is-dense? p2))(cutoff-zeros (gcd-helper (to-dense p1) p2))]
+    [else (cutoff-zeros (gcd-helper p1 p2))]))
+
+(define (gcd-helper p1 p2)
+  (cond
+    [(is-zero? p2) (distribute (/ 1 (coeff p1 (degree p1))) 0 p1)]
+    [else (gcd p2 (remainder p1 p2))]))
+
+    
+              
+
   
 
 (define T1 '((1 0) (1 1)))                   ; (x+1)                  sparse
@@ -478,3 +506,19 @@ T12
 (derivative T10)
 (derivative T11)
 (derivative T12)
+
+(displayln "")
+(displayln "gcd test")
+(gcd T1 T1)
+(gcd T2 T1)
+(gcd T3 T2)
+(gcd T4 T1)
+(gcd T5 T7)
+(gcd T6 T1)
+(gcd T7 T10) 
+(gcd T8 T11)
+(gcd T9 T6)
+(gcd T10 T10)
+(gcd T11 T12)
+(gcd T12 T1)
+(gcd '(5) T10)
