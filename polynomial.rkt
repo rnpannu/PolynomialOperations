@@ -244,8 +244,10 @@
     [else (remainder-helper (subtract p1  (multiply (findcoeff p1 p2 0) p2)) p2)]))
 
 
-; derivative, returns the derivative of the parameter polynomial. Utilizes a helper function with an
-;             integer offset parameter to keep track of the power of the current element.
+; derivative, returns the derivative of the parameter polynomial by dropping the first element in the list (constant
+;             term), and continuing with the rest of the list, effectively dropping the power of every element by 1.
+;             multiplies the coefficient by an integer offset parameter that represents the former power of the 
+;             term with respect to the original polynomial.
 
 (define (derivative lst)
   (cond
