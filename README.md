@@ -1,5 +1,7 @@
 A functional language polynomial operation solver. Considers 2 different representation of polynomials,
 
+[Video](https://youtu.be/zWnSM-yjhHY)
+
 Dense: List of coefficients of increasing power
 
 Sparse: 2-tuples of coefficient/power pairs.
